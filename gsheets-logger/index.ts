@@ -6,6 +6,12 @@ const LOGGED_EVENTS: HookEvent[] = ['message:received', 'message:sent', 'message
 const BUFFER_KEY = 'buffer';
 const MAX_BUFFER = 5000;
 
+// Baked from manifest.json at build time by package.mjs (esbuild `define`). The sandbox does not pass
+// `manifest` into ctx, so this is how the plugin knows its own version at runtime. Falls back to a dev
+// marker when run un-bundled (e.g. the test runner).
+declare const __PLUGIN_VERSION__: string;
+const PLUGIN_VERSION = typeof __PLUGIN_VERSION__ !== 'undefined' ? __PLUGIN_VERSION__ : '0.0.0-dev';
+
 export interface LoggerConfig {
   serviceAccountJson: string;
   spreadsheetId: string;
@@ -79,6 +85,7 @@ export default class GSheetsLogger implements IPlugin {
       });
     }
     this.startTimer(config.flushIntervalSec);
+    ctx.logger.log(`gsheets-logger v${PLUGIN_VERSION} enabled → sheet ${config.spreadsheetId} (tab "${config.sheetTab}")`);
   }
 
   async onConfigChange(ctx: PluginContext, _newConfig: Record<string, unknown>): Promise<void> {
@@ -103,7 +110,7 @@ export default class GSheetsLogger implements IPlugin {
   }
 
   async healthCheck(): Promise<{ healthy: boolean; message?: string }> {
-    return { healthy: this.client !== null, message: `${this.buffer.length} rows buffered` };
+    return { healthy: this.client !== null, message: `v${PLUGIN_VERSION} — ${this.buffer.length} rows buffered` };
   }
 
   private startTimer(intervalSec: number): void {

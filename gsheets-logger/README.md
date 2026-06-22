@@ -2,6 +2,11 @@
 
 Logs every emitted WhatsApp message event to a Google Sheet via a Google service account.
 
+**Version:** the installed version is `manifest.json`'s `version` (currently **0.2.0**). OpenWA shows it in
+the dashboard Plugins list (`v0.2.0`) and in `GET /plugins/:id`. At runtime the plugin also reports it in
+its enable log line and in `healthCheck` (`GET /plugins/gsheets-logger/health` → `"v0.2.0 — N rows buffered"`),
+since the version is baked into the bundle from the manifest at build time.
+
 ## What it logs
 
 One row per event, with columns:
@@ -67,14 +72,13 @@ a single quote (`'`) when they start with a formula trigger:
 
 ## Compatibility & runtime notes
 
-External plugins run **sandboxed in a worker thread**. This plugin relies on two host capabilities that
-shipped after **v0.6.0** (on `main`, OpenWA #430):
+External plugins run **sandboxed in a worker thread** (since OpenWA **v0.6.0**). Two capabilities are
+version-dependent:
 
-- **Live config updates.** `PUT /plugins/gsheets-logger/config` reaches the running plugin — it rebuilds
-  the Sheets client, drains the buffer to the *old* sheet first, then restarts the timer. On the initial
-  v0.6.0 sandbox release this was not delivered; on that build, disable + re-enable after a config change.
-- **Graceful-shutdown flush.** On SIGTERM the buffer is flushed and persisted before exit. A hard kill
-  (SIGKILL/OOM) can still drop rows buffered since the last flush (≤ `flushIntervalSec`) — lower the
-  interval to narrow that window.
-
-`message:ack` rows require an OpenWA build that emits the hook (#427, v0.6.0+).
+- **`message:ack` rows** require the hook to actually be emitted — **OpenWA ≥ v0.6.1** (#427). On v0.6.0
+  the hook was declared but never fired, so ack rows are absent.
+- **Live config updates** (`PUT /plugins/gsheets-logger/config` reaching the running plugin — it rebuilds
+  the Sheets client, drains the buffer to the *old* sheet first, then restarts the timer) and
+  **graceful-shutdown buffer flush** require the sandbox lifecycle follow-ups (#430), **unreleased** (the
+  first release after v0.6.1). On v0.6.0/v0.6.1, a config change needs a disable + re-enable, and a
+  non-graceful exit (SIGKILL/OOM) can drop rows buffered since the last flush (≤ `flushIntervalSec`).

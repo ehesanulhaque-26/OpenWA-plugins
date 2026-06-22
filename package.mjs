@@ -24,6 +24,9 @@ await build({
   format: 'cjs',
   target: 'node22',
   outfile: join(dir, 'dist', 'index.js'),
+  // Bake the manifest version into the bundle (single source of truth = manifest.json) so the plugin
+  // can report its own version at runtime — the sandbox does not pass `manifest` into ctx.
+  define: { __PLUGIN_VERSION__: JSON.stringify(manifest.version) },
 });
 
 const zipName = `${plugin}.zip`;
