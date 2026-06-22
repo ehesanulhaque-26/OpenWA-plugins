@@ -1,0 +1,32 @@
+{
+  "id": "faq-bot",
+  "name": "FAQ / Auto-Reply Bot",
+  "version": "0.1.0",
+  "type": "extension",
+  "main": "dist/index.js",
+  "description": "Auto-replies to inbound WhatsApp messages from configurable FAQ keyword/regex rules.",
+  "author": "Yudhi Armyndharis <yudhi@rmyndharis.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/rmyndharis/OpenWA-plugins/tree/main/faq-bot",
+  "repository": "https://github.com/rmyndharis/OpenWA-plugins",
+  "keywords": ["faq", "auto-reply", "chatbot", "support", "whatsapp", "openwa"],
+  "status": "stable",
+  "minOpenWAVersion": "0.6.1",
+  "testedOpenWAVersion": "0.6.1",
+  "provides": ["auto-reply"],
+  "permissions": ["messages:send"],
+  "sessions": ["*"],
+  "hooks": ["message:received"],
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "rules": { "type": "string", "required": true, "title": "Rules (JSON)",
+        "description": "JSON array of { mode: 'contains'|'exact'|'regex', pattern: string, reply: string }." },
+      "fallbackReply": { "type": "string", "default": "", "title": "Fallback reply",
+        "description": "Sent when no rule matches. Leave empty to stay silent." },
+      "fallbackCooldownSec": { "type": "number", "default": 600, "title": "Fallback cooldown (seconds per chat)",
+        "description": "Minimum seconds between fallback replies to the same chat. 0 = reply every time." },
+      "respondInGroups": { "type": "boolean", "default": false, "title": "Also respond in group chats" }
+    }
+  }
+}
