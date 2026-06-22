@@ -8,8 +8,13 @@ export const COLUMNS = [
 type FailedPayload = { sessionId?: string; error?: string; input?: { chatId?: string; text?: string } };
 type AckPayload = { messageId?: string; status?: string };
 
+// Neutralize CSV / spreadsheet formula injection: a value whose first character is one of
+// = + - @ <tab> <CR> is treated as a formula by spreadsheet apps on export/re-import. Prefixing
+// with a single quote makes Sheets keep it literal (the quote is stripped on display). All
+// attacker-controlled cells flow through here, so this single guard covers the whole row.
 function str(value: unknown): string {
-  return value == null ? '' : String(value);
+  const s = value == null ? '' : String(value);
+  return /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
 }
 
 export function buildRow(ctx: HookContext): string[] {

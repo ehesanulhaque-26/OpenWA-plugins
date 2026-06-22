@@ -48,3 +48,15 @@ test('absent fields degrade to empty strings', () => {
   assert.equal(row[1], '');  // sessionId
   assert.equal(row[10], ''); // body
 });
+
+test('sanitizes formula-injection in attacker-controlled cells', () => {
+  const row = buildRow({
+    event: 'message:received', sessionId: 's1', timestamp: T, source: 'Engine',
+    data: { id: 'M9', from: '62811@c.us', to: 'me', chatId: '62811@c.us',
+            body: '=HYPERLINK("http://evil","x")', type: 'text', fromMe: false, isGroup: false,
+            contact: { pushName: '=1+1' } },
+  });
+  assert.equal(row[10], `'=HYPERLINK("http://evil","x")`); // body neutralized
+  assert.equal(row[7], `'=1+1`);                            // senderName neutralized
+  assert.equal(row[5], '62811@c.us');                       // benign value untouched
+});
