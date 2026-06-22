@@ -34,6 +34,7 @@ This repository provides:
 <!-- BEGIN PLUGIN CATALOG -->
 | Plugin | Description | Version | Status |
 | ------ | ----------- | ------- | ------ |
+| [`faq-bot`](./faq-bot) | Auto-replies to inbound WhatsApp messages from configurable FAQ keyword/regex rules. | 0.1.0 | stable |
 | [`gsheets-logger`](./gsheets-logger) | Logs WhatsApp message events to a Google Sheet via a service account. | 0.2.0 | stable |
 <!-- END PLUGIN CATALOG -->
 
