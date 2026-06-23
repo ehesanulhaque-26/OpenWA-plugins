@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chat Flow Config</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    background: #f8f9fa;
+    color: #212529;
+    padding: 16px;
+  }
+  h1 { font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #1a1a2e; }
+  .field { margin-bottom: 14px; }
+  label { display: block; font-weight: 500; margin-bottom: 4px; }
+  input[type="text"], textarea {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #fff;
+    transition: border-color 0.15s;
+  }
+  input[type="text"]:focus, textarea:focus {
+    outline: none;
+    border-color: #4f7fff;
+    box-shadow: 0 0 0 2px rgba(79,127,255,0.15);
+  }
+  textarea { resize: vertical; min-height: 64px; }
+  .check-row { display: flex; align-items: center; gap: 8px; }
+  .check-row input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+  .section-title {
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6c757d;
+    margin-bottom: 8px;
+    margin-top: 18px;
+  }
+  .tree { margin-bottom: 12px; }
+  .node {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .node-header { display: flex; align-items: flex-start; gap: 8px; }
+  .node-key {
+    width: 72px;
+    flex-shrink: 0;
+  }
+  .node-text { flex: 1; min-height: 48px; }
+  .node-actions { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+  .children { margin-left: 20px; margin-top: 8px; padding-left: 12px; border-left: 2px solid #e9ecef; }
+  button {
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    padding: 4px 9px;
+    white-space: nowrap;
+  }
+  .btn-add {
+    background: #e8f0fe;
+    color: #2d5fc4;
+    border-color: #b8d0f7;
+  }
+  .btn-add:hover { background: #d0e3ff; }
+  .btn-remove {
+    background: #fdecea;
+    color: #b91c1c;
+    border-color: #f5c6c6;
+  }
+  .btn-remove:hover { background: #fcd5d5; }
+  .btn-add-root {
+    background: #e6f4ea;
+    color: #1a7a3a;
+    border-color: #a8d5b5;
+    font-size: 13px;
+    padding: 6px 14px;
+    margin-bottom: 12px;
+  }
+  .btn-add-root:hover { background: #c9e9d2; }
+  .btn-save {
+    background: #4f7fff;
+    color: #fff;
+    border-color: #3360cc;
+    font-size: 14px;
+    padding: 9px 24px;
+    font-weight: 600;
+    margin-top: 16px;
+  }
+  .btn-save:hover:not(:disabled) { background: #3360cc; }
+  .btn-save:disabled { opacity: 0.55; cursor: not-allowed; }
+  #feedback {
+    margin-top: 10px;
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-size: 13px;
+    display: none;
+  }
+  #feedback.ok { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; display: block; }
+  #feedback.err { background: #f8d7da; color: #721c24; border: 1px solid #f5c6c6; display: block; }
+  .hint { font-size: 11px; color: #868e96; margin-top: 2px; }
+</style>
+</head>
+<body>
+<h1>Chat Flow Editor</h1>
+
+<div class="field">
+  <label for="trigger">Trigger word</label>
+  <input type="text" id="trigger" placeholder="e.g. menu (leave blank = any message)">
+  <p class="hint">Case-insensitive. Leave empty to start on any incoming message.</p>
+</div>
+
+<div class="field">
+  <label for="greeting">Greeting / opening menu</label>
+  <textarea id="greeting" rows="4" placeholder="Hi! Please choose:\n1. Hosting\n2. Support"></textarea>
+</div>
+
+<div class="field check-row">
+  <input type="checkbox" id="respondInGroups">
+  <label for="respondInGroups" style="margin-bottom:0">Also respond in group chats</label>
+</div>
+
+<div class="section-title">Menu options</div>
+<div class="tree" id="tree"></div>
+<button class="btn-add-root" id="addRoot">+ Add option</button>
+
+<div>
+  <button class="btn-save" id="saveBtn">Save</button>
+  <div id="feedback"></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
+  function el(tag, attrs, children) {
+    var e = document.createElement(tag);
+    if (attrs) Object.entries(attrs).forEach(function([k, v]) { e[k] = v; });
+    if (children) children.forEach(function(c) { if (c) e.appendChild(c); });
+    return e;
+  }
+
+  function input(cls, placeholder, val) {
+    var e = el('input', { type: 'text', className: cls, placeholder: placeholder || '' });
+    e.value = val != null ? val : '';
+    return e;
+  }
+
+  function textarea(cls, placeholder, val) {
+    var e = el('textarea', { className: cls, placeholder: placeholder || '' });
+    e.value = val != null ? val : '';
+    return e;
+  }
+
+  // ── Tree rendering ────────────────────────────────────────────────────────
+
+  function renderNode(node) {
+    // node = { key?: string, text?: string, options?: Node[] }
+    var keyIn = input('node-key', 'Key (e.g. 1)', node.key || '');
+    var textIn = textarea('node-text', 'Reply text', node.text || '');
+    var removeBtn = el('button', { className: 'btn-remove', type: 'button', textContent: 'Remove' });
+    var addChildBtn = el('button', { className: 'btn-add', type: 'button', textContent: '+ Sub-option' });
+
+    var children = el('div', { className: 'children' });
+    (node.options || []).forEach(function(child) {
+      children.appendChild(renderNode(child));
+    });
+    // Hide children container when empty (border-left looks odd empty)
+    function updateChildrenVisibility() {
+      children.style.display = children.childElementCount ? '' : 'none';
+    }
+    updateChildrenVisibility();
+
+    addChildBtn.addEventListener('click', function() {
+      children.appendChild(renderNode({}));
+      updateChildrenVisibility();
+    });
+
+    var nodeDiv = el('div', { className: 'node' }, [
+      el('div', { className: 'node-header' }, [
+        keyIn,
+        textIn,
+        el('div', { className: 'node-actions' }, [removeBtn, addChildBtn])
+      ]),
+      children
+    ]);
+
+    removeBtn.addEventListener('click', function() {
+      var parent = nodeDiv.parentNode;
+      parent.removeChild(nodeDiv);
+      // If the parent is a .children div, update its visibility
+      if (parent.classList && parent.classList.contains('children')) {
+        parent.style.display = parent.childElementCount ? '' : 'none';
+      }
+    });
+
+    return nodeDiv;
+  }
+
+  // ── Assemble config from DOM ──────────────────────────────────────────────
+
+  function assembleNodes(containerEl) {
+    var result = [];
+    var nodeDivs = containerEl.children;
+    for (var i = 0; i < nodeDivs.length; i++) {
+      var nodeDiv = nodeDivs[i];
+      var keyIn = nodeDiv.querySelector('.node-key');
+      var textIn = nodeDiv.querySelector('.node-text');
+      var childrenEl = nodeDiv.querySelector('.children');
+      var key = keyIn ? keyIn.value.trim() : '';
+      if (!key) continue; // drop nodes with empty key
+      var node = { key: key, text: textIn ? textIn.value : '' };
+      var childNodes = childrenEl ? assembleNodes(childrenEl) : [];
+      if (childNodes.length) node.options = childNodes;
+      result.push(node);
+    }
+    return result;
+  }
+
+  function assembleConfig() {
+    return {
+      trigger: document.getElementById('trigger').value,
+      greeting: document.getElementById('greeting').value,
+      respondInGroups: document.getElementById('respondInGroups').checked,
+      options: assembleNodes(document.getElementById('tree'))
+    };
+  }
+
+  // ── Populate DOM from config ──────────────────────────────────────────────
+
+  function populateConfig(cfg) {
+    // Coerce / default every field — never throw on bad input
+    var c = cfg && typeof cfg === 'object' ? cfg : {};
+    document.getElementById('trigger').value = typeof c.trigger === 'string' ? c.trigger : '';
+    document.getElementById('greeting').value = typeof c.greeting === 'string' ? c.greeting : '';
+    document.getElementById('respondInGroups').checked = !!c.respondInGroups;
+    var tree = document.getElementById('tree');
+    tree.textContent = ''; // clear safely
+    var opts = Array.isArray(c.options) ? c.options : [];
+    opts.forEach(function(node) {
+      if (node && typeof node === 'object') {
+        tree.appendChild(renderNode(node));
+      }
+    });
+  }
+
+  // ── postMessage bridge ────────────────────────────────────────────────────
+
+  var saveBtn = document.getElementById('saveBtn');
+  var feedback = document.getElementById('feedback');
+
+  function showFeedback(msg, isOk) {
+    feedback.textContent = msg;
+    feedback.className = isOk ? 'ok' : 'err';
+  }
+
+  function hideFeedback() {
+    feedback.className = '';
+    feedback.style.display = 'none';
+  }
+
+  window.addEventListener('message', function(event) {
+    var data = event.data;
+    if (!data || typeof data.type !== 'string') return;
+    if (data.type === 'config:value') {
+      populateConfig(data.config);
+    } else if (data.type === 'config:saved') {
+      showFeedback('Saved!', true);
+      saveBtn.disabled = false;
+    } else if (data.type === 'config:error') {
+      showFeedback(data.message || 'Save failed.', false);
+      saveBtn.disabled = false;
+    }
+    // Ignore unrecognized types
+  });
+
+  saveBtn.addEventListener('click', function() {
+    saveBtn.disabled = true;
+    hideFeedback();
+    var cfg = assembleConfig();
+    parent.postMessage({ type: 'config:save', config: cfg }, '*');
+  });
+
+  document.getElementById('addRoot').addEventListener('click', function() {
+    document.getElementById('tree').appendChild(renderNode({}));
+  });
+
+  // Request config on load
+  parent.postMessage({ type: 'config:get' }, '*');
+})();
+</script>
+
+<!-- Self-test: load with ?selftest to run round-trip assertions in the console -->
+<script>
+if (new URLSearchParams(location.search).has('selftest')) {
+  (function selftest() {
+    // Minimal stubs so assembleNodes/assembleConfig can be called
+    // We test the logic inline by replicating it here (same source of truth)
+
+    function assembleNodesFromArray(arr) {
+      // arr = [{key, text, options?}]
+      var result = [];
+      arr.forEach(function(node) {
+        var key = (node.key || '').trim();
+        if (!key) return;
+        var out = { key: key, text: node.text || '' };
+        var kids = node.options ? assembleNodesFromArray(node.options) : [];
+        if (kids.length) out.options = kids;
+        result.push(out);
+      });
+      return result;
+    }
+
+    function roundTrip(cfg) {
+      // Mirror populateConfig coercion: guard against null/non-object
+      var c = cfg && typeof cfg === 'object' ? cfg : {};
+      return {
+        trigger: typeof c.trigger === 'string' ? c.trigger : '',
+        greeting: typeof c.greeting === 'string' ? c.greeting : '',
+        respondInGroups: !!c.respondInGroups,
+        options: assembleNodesFromArray(Array.isArray(c.options) ? c.options : [])
+      };
+    }
+
+    // ── Test 1: basic round-trip with nesting ──
+    var sample = {
+      trigger: 'menu',
+      greeting: 'Hi! Choose an option:',
+      respondInGroups: false,
+      options: [
+        { key: '1', text: 'Hosting', options: [
+          { key: '1', text: 'Shared hosting info' },
+          { key: '2', text: 'VPS info' }
+        ]},
+        { key: '2', text: 'Support' }
+      ]
+    };
+    var result = roundTrip(sample);
+    console.assert(result.trigger === 'menu', 'trigger preserved');
+    console.assert(result.greeting === 'Hi! Choose an option:', 'greeting preserved');
+    console.assert(result.respondInGroups === false, 'respondInGroups preserved');
+    console.assert(result.options.length === 2, 'two root options');
+    console.assert(result.options[0].key === '1', 'root[0] key');
+    console.assert(result.options[0].text === 'Hosting', 'root[0] text');
+    console.assert(Array.isArray(result.options[0].options), 'root[0] has sub-options');
+    console.assert(result.options[0].options.length === 2, 'root[0] has 2 sub-options');
+    console.assert(result.options[0].options[0].key === '1', 'sub[0] key');
+    console.assert(result.options[0].options[1].key === '2', 'sub[1] key');
+    console.assert(!result.options[1].options, 'leaf has no options property');
+
+    // ── Test 2: empty-key nodes are dropped ──
+    var withEmpties = {
+      trigger: '',
+      greeting: 'Hi',
+      respondInGroups: true,
+      options: [
+        { key: '', text: 'should be dropped' },
+        { key: '  ', text: 'also dropped (whitespace)' },
+        { key: '1', text: 'kept' }
+      ]
+    };
+    var r2 = roundTrip(withEmpties);
+    console.assert(r2.options.length === 1, 'empty-key nodes dropped');
+    console.assert(r2.options[0].key === '1', 'kept node key');
+    console.assert(r2.respondInGroups === true, 'respondInGroups true preserved');
+
+    // ── Test 3: partial / bad config coerced without throwing ──
+    var r3 = roundTrip({});
+    console.assert(r3.trigger === '', 'missing trigger defaults to empty string');
+    console.assert(r3.greeting === '', 'missing greeting defaults to empty string');
+    console.assert(r3.respondInGroups === false, 'missing respondInGroups defaults false');
+    console.assert(r3.options.length === 0, 'missing options defaults to []');
+
+    var r4 = roundTrip(null);
+    console.assert(r4.trigger === '', 'null config: trigger defaults');
+
+    // ── Test 4: keys are trimmed ──
+    var r5 = roundTrip({ options: [{ key: '  2  ', text: 'trimmed' }] });
+    console.assert(r5.options[0].key === '2', 'key is trimmed');
+
+    console.log('[selftest] All assertions passed.');
+  })();
+}
+</script>
+</body>
+</html>

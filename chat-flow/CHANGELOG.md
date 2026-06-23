@@ -1,0 +1,24 @@
+# Changelog
+
+All notable changes to the **Chat Flow** plugin are documented here.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this plugin adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The version here always matches `manifest.json`'s `version`.
+
+## [Unreleased]
+
+## [1.0.0] — 2026-06-23
+
+First release. Built against the OpenWA v0.7 plugin contract.
+
+### Added
+
+- Interactive menu flow: a trigger word (or any message) sends a greeting + numbered menu; replies select
+  options and traverse a configurable menu tree; leaf nodes end the flow.
+- Per-(session, chat) state in `ctx.storage`, expiring after 15 minutes of inactivity; the trigger word
+  restarts an active flow. Invalid stored paths (after a config edit) reset safely with bounded re-processing.
+- The flow definition is read from the resolved per-session `ctx.config` (the platform owns activation),
+  and applies live via `onConfigChange`.
+- `respondInGroups` toggle (default off — direct chats only). Declares only `messages:send`.
+- A visual flow-tree config editor (`configUi`).

@@ -1,0 +1,42 @@
+{
+  "id": "chat-flow",
+  "name": "Chat Flow",
+  "version": "1.0.0",
+  "type": "extension",
+  "main": "dist/index.js",
+  "description": "Interactive, stateful auto-reply: a trigger word starts a greeting + numbered menu, replies traverse a configurable menu tree, and per-chat state expires after 15 minutes.",
+  "author": "Yudhi Armyndharis <yudhi@rmyndharis.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/rmyndharis/OpenWA-plugins/tree/main/chat-flow",
+  "repository": "https://github.com/rmyndharis/OpenWA-plugins",
+  "keywords": ["menu", "flow", "interactive", "auto-reply", "chatbot", "whatsapp", "openwa"],
+  "status": "stable",
+  "minOpenWAVersion": "0.7.0",
+  "testedOpenWAVersion": "0.7.0",
+  "provides": ["auto-reply"],
+  "permissions": ["messages:send"],
+  "sessionScoped": true,
+  "sessions": ["*"],
+  "hooks": ["message:received"],
+  "configUi": { "entry": "config/index.html", "height": 600 },
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "trigger": { "type": "string", "title": "Trigger word",
+        "description": "The word that starts the flow (case-insensitive). Leave empty to start on any message." },
+      "greeting": { "type": "textarea", "required": true, "title": "Greeting + menu",
+        "description": "Sent when the flow starts. Include your numbered menu here." },
+      "respondInGroups": { "type": "boolean", "default": false, "title": "Also respond in group chats" },
+      "options": { "type": "array", "title": "Menu options",
+        "description": "The menu tree. Each option has a key (what the user types, e.g. \"1\"), the reply text, and optional sub-options. Edit visually in the Flow editor.",
+        "items": { "type": "object", "properties": {
+          "key": { "type": "string", "title": "Key" },
+          "text": { "type": "textarea", "title": "Reply text" },
+          "options": { "type": "array", "title": "Sub-options", "items": { "type": "object", "properties": {
+            "key": { "type": "string", "title": "Key" },
+            "text": { "type": "textarea", "title": "Reply text" }
+          } } }
+        } } }
+    }
+  }
+}
