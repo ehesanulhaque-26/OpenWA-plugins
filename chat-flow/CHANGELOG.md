@@ -8,6 +8,16 @@ The version here always matches `manifest.json`'s `version`.
 
 ## [Unreleased]
 
+## [1.0.1] — 2026-06-23
+
+### Fixed
+
+- Menu lookups now use `Object.hasOwn`, so a message whose text is an `Object.prototype` member name
+  (e.g. `constructor`, `toString`, `__proto__`) is treated as an invalid option instead of falsely matching
+  an inherited member (which previously replied with empty text and ended the flow). Option keys that
+  collide with such names are also accepted by config validation (no more spurious "duplicate" error);
+  a literal `__proto__` option key is rejected explicitly.
+
 ## [1.0.0] — 2026-06-23
 
 First release. Built against the OpenWA v0.7 plugin contract.

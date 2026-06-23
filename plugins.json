@@ -27,7 +27,7 @@
   {
     "id": "chat-flow",
     "name": "Chat Flow",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "type": "extension",
     "status": "stable",
     "description": "Interactive, stateful auto-reply: a trigger word starts a greeting + numbered menu, replies traverse a configurable menu tree, and per-chat state expires after 15 minutes.",
@@ -48,7 +48,7 @@
     "repoPath": "chat-flow",
     "repoUrl": "https://github.com/rmyndharis/OpenWA-plugins",
     "homepage": "https://github.com/rmyndharis/OpenWA-plugins/tree/main/chat-flow",
-    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/chat-flow-v1.0.0/chat-flow.zip"
+    "download": "https://github.com/rmyndharis/OpenWA-plugins/releases/download/chat-flow-v1.0.1/chat-flow.zip"
   },
   {
     "id": "faq-bot",
