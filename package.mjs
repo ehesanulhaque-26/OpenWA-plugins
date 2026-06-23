@@ -27,6 +27,14 @@ const missing = ['id', 'name', 'version', 'type', 'main'].filter((f) => !manifes
 if (missing.length) fail(`manifest.json missing required field(s): ${missing.join(', ')}`);
 if (manifest.type !== 'extension') fail(`type must be "extension" to be installable (got "${manifest.type}")`);
 
+// Warn on unsupported i18n locale codes
+const SUPPORTED_LOCALES = ['en', 'es', 'fr', 'it', 'ar', 'he', 'te', 'zh-CN', 'zh-HK'];
+if (manifest.i18n && typeof manifest.i18n === 'object') {
+  for (const code of Object.keys(manifest.i18n)) {
+    if (!SUPPORTED_LOCALES.includes(code)) console.warn(`⚠ ${plugin}: i18n locale "${code}" is not a dashboard-supported code`);
+  }
+}
+
 // version must match the top released CHANGELOG heading (single source of release truth)
 if (!existsSync(join(dir, 'CHANGELOG.md'))) fail('missing CHANGELOG.md');
 const top = readFileSync(join(dir, 'CHANGELOG.md'), 'utf8').match(/^##\s*\[(\d+\.\d+\.\d+)\]\s*[—–-]\s*\d{4}-\d{2}-\d{2}/m);
