@@ -117,7 +117,7 @@ The service-account JSON is marked `secret` in the config schema, so OpenWA mask
 
 ## Changelog
 
-See [CHANGELOG.md](./CHANGELOG.md). Latest: **0.2.1** (2026-06-23) — first packaged release.
+See [CHANGELOG.md](./CHANGELOG.md). Latest: **0.2.1** (2026-06-23) — localized dashboard text (8 locales).
 
 ## License
 
