@@ -37,9 +37,9 @@ export function parseSchedule(json: string): Schedule {
     if (!DAYS.includes(day)) throw new Error(`schedule: unknown day "${key}"`);
     if (value === null) continue; // closed
     if (typeof value !== 'string') throw new Error(`schedule: ${day} must be "HH:MM-HH:MM" or null`);
-    const [openS, closeS] = value.split('-');
-    const openMin = openS !== undefined ? parseHHMM(openS) : null;
-    const closeMin = closeS !== undefined ? parseHHMM(closeS) : null;
+    const m = /^(\d{2}:\d{2})-(\d{2}:\d{2})$/.exec(value);
+    const openMin = m ? parseHHMM(m[1]) : null;
+    const closeMin = m ? parseHHMM(m[2]) : null;
     if (openMin === null || closeMin === null) {
       throw new Error(`schedule: ${day} window "${value}" is not "HH:MM-HH:MM"`);
     }

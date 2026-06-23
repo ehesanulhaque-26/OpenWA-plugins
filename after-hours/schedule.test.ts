@@ -17,6 +17,7 @@ test('parseSchedule rejects bad input', () => {
   assert.throws(() => parseSchedule(JSON.stringify({ mon: '9:00-17:00' })), /HH:MM/i);
   assert.throws(() => parseSchedule(JSON.stringify({ mon: '17:00-09:00' })), /before close/i);
   assert.throws(() => parseSchedule(JSON.stringify({ mon: null, sun: null })), /no open days/i);
+  assert.throws(() => parseSchedule(JSON.stringify({ mon: '09:00-17:00-junk' })), /HH:MM/i);
 });
 
 test('parseSchedule yields minute windows and treats null/absent as closed', () => {
