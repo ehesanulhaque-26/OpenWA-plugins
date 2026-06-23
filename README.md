@@ -34,6 +34,7 @@ This repository provides:
 <!-- BEGIN PLUGIN CATALOG -->
 | Plugin | Description | Version | Status |
 | ------ | ----------- | ------- | ------ |
+| [`after-hours`](./after-hours) | Auto-replies with a configurable away/closing message to messages received outside business hours. | 0.1.0 | stable |
 | [`faq-bot`](./faq-bot) | Auto-replies to inbound WhatsApp messages from configurable FAQ keyword/regex rules. | 0.1.0 | stable |
 | [`gsheets-logger`](./gsheets-logger) | Logs WhatsApp message events to a Google Sheet via a service account. | 0.2.0 | stable |
 <!-- END PLUGIN CATALOG -->
