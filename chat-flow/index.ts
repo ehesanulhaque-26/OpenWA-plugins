@@ -22,8 +22,11 @@ export function toFlowNodes(nodes: unknown): Record<string, FlowNode> | undefine
     const key = String(n.key ?? '').trim();
     const text = String(n.text ?? '');
     if (!key) throw new Error('chat-flow: each option needs a non-empty "key"');
+    if (key === '__proto__') throw new Error('chat-flow: option key "__proto__" is not allowed');
     if (!text) throw new Error(`chat-flow: option "${key}" needs "text"`);
-    if (out[key]) throw new Error(`chat-flow: duplicate option key "${key}"`);
+    // Object.hasOwn (not a bare `out[key]`): an operator may name a key "toString"/"constructor"/etc.,
+    // which would hit the inherited Object.prototype member and throw a spurious "duplicate".
+    if (Object.hasOwn(out, key)) throw new Error(`chat-flow: duplicate option key "${key}"`);
     out[key] = { text, options: toFlowNodes(n.options) };
   }
   return out;

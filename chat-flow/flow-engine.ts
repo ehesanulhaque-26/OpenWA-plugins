@@ -76,7 +76,7 @@ export class FlowEngine {
 
     context.logger.debug('[FlowEngine] Traversing path', { path: state.path });
     for (const key of state.path) {
-      if (currentNode && currentNode.options && currentNode.options[key]) {
+      if (currentNode && currentNode.options && Object.hasOwn(currentNode.options, key)) {
         currentNode = currentNode.options[key];
       } else {
         // State is invalid (e.g. config changed under the user). Reset, then re-process — bounded.
@@ -94,7 +94,11 @@ export class FlowEngine {
     context.logger.debug('[FlowEngine] Current node options', {
       options: currentNode.options ? Object.keys(currentNode.options) : null,
     });
-    const nextNode = currentNode.options ? currentNode.options[input] : undefined;
+    // Object.hasOwn, not a bare `options[input]`: the user-supplied `input` must not match inherited
+    // Object.prototype names (e.g. "constructor", "toString", "__proto__"), which would otherwise be a
+    // truthy false-match and send `reply(undefined)`.
+    const nextNode =
+      currentNode.options && Object.hasOwn(currentNode.options, input) ? currentNode.options[input] : undefined;
 
     if (nextNode) {
       context.logger.debug('[FlowEngine] Input matched option', { input, text: nextNode.text });

@@ -1,10 +1,11 @@
 /**
  * Group auto-translation extension plugin.
  *
- * Ports the former core `translation` module onto the Tier-2 capability layer (#294): the
+ * Ports OpenWA's core `translation` module onto the v0.7 plugin capability surface: the
  * framework-agnostic `core/` (coordinator, parser, formatter, ports) is reused unchanged, with
- * `ChatGateway`/`ConfigStore` implemented over `ctx.messages`/`ctx.engine`/`ctx.storage`.
- * Registered DISABLED by default — enable via `POST /plugins/translation/enable`.
+ * `ChatGateway`/`ConfigStore` implemented over `ctx.messages`/`ctx.engine`/`ctx.storage`, and outbound
+ * translate calls routed through `ctx.net.fetch`. Disabled until enabled via
+ * `POST /plugins/group-translate/enable`.
  */
 import type { PluginContext, IPlugin, HookContext, HookResult, IncomingMessage } from '../types/openwa';
 import { TranslationCoordinator, CoordinatorOptions } from './core/translation.coordinator';

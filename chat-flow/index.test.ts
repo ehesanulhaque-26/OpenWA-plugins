@@ -29,3 +29,13 @@ test('toFlowNodes nests recursively and rejects bad nodes', () => {
   assert.throws(() => toFlowNodes([{ key: '1', text: '' }]), /needs "text"/);
   assert.throws(() => toFlowNodes([{ key: '1', text: 'A' }, { key: '1', text: 'B' }]), /duplicate option key/);
 });
+
+test('toFlowNodes accepts keys that collide with Object.prototype names, but rejects __proto__', () => {
+  const nodes = toFlowNodes([{ key: 'toString', text: 'A' }, { key: 'constructor', text: 'B' }]);
+  assert.equal(nodes!['toString'].text, 'A'); // no spurious "duplicate" on the first use
+  assert.equal(nodes!['constructor'].text, 'B');
+  // a genuine duplicate of such a key still throws
+  assert.throws(() => toFlowNodes([{ key: 'toString', text: 'A' }, { key: 'toString', text: 'B' }]), /duplicate option key/);
+  // __proto__ would set the prototype rather than an own key — reject it outright
+  assert.throws(() => toFlowNodes([{ key: '__proto__', text: 'A' }]), /not allowed/);
+});

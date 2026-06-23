@@ -131,3 +131,22 @@ test('invalid stored path with a non-trigger input resets and stops (bounded)', 
   assert.equal(replies.length, 0);
   assert.equal(storage.has(key), false);
 });
+
+test('a prototype-property name as input is an invalid option, never a false match', async () => {
+  // `abc.options` is a plain object, so a bare `options["constructor"]` would resolve to the inherited
+  // Object constructor (truthy) and reply with `nextNode.text === undefined`. Object.hasOwn prevents that.
+  for (const evil of ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf']) {
+    const { ctx, storage, replies } = makeCtx();
+    await FlowEngine.processMessage(ctx, abc, 'abc-company', 'user1', 'hi', 'm1'); // start the flow
+    replies.length = 0;
+    const r = await FlowEngine.processMessage(ctx, abc, 'abc-company', 'user1', evil, 'm2');
+    assert.equal(r, true, `${evil} should be handled`);
+    assert.equal(replies.length, 1, `${evil} should yield exactly one reply`);
+    assert.equal(
+      replies[0].text,
+      `Invalid option. Please choose one of the available options:\n\n${abc.greeting}`,
+      `${evil} should get the invalid-option fallback`,
+    );
+    assert.deepEqual((storage.get(key) as { path: string[] }).path, [], `${evil} keeps the flow active`);
+  }
+});
