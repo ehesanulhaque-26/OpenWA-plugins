@@ -45,10 +45,16 @@ OpenWA-plugins/
   // ── Surfaced by OpenWA ──
   "description": "…",            // rendered in the dashboard card + returned by the API
   "provides": ["feature-tag"],  // rendered as tags in the dashboard card
-  "permissions": [],            // "messages:send" / "engine:read" — enforced at runtime
-  "sessions": ["*"],            // session scope (static)
+  "permissions": [],            // "messages:send" / "engine:read" / "net:fetch" — enforced at runtime
+  "sessions": ["*"],            // capability session scope (static; editing config can't widen it)
   "hooks": ["message:received"],// declared interest
-  "configSchema": { … },        // drives the dashboard config form; mark secrets with "secret": true
+  "configSchema": { … },        // declarative config form (see vocabulary below); mark secrets "secret": true
+
+  // ── v0.7 contract ──
+  "sessionScoped": true,        // default true: only runs for sessions an operator activates it for
+                                //   (ctx.config is the resolved per-session slice). false = global, always on.
+  "net": { "allow": ["api.example.com:443"] }, // outbound-HTTP allowlist for ctx.net.fetch (needs "net:fetch")
+  "configUi": { "entry": "config/index.html", "height": 600 }, // sandboxed-iframe config editor (see below)
 
   // ── Returned by the API (not yet rendered by the dashboard) ──
   "author": "Name <email>",     // string form (npm-style)
@@ -59,8 +65,8 @@ OpenWA-plugins/
   "repository": "https://github.com/rmyndharis/OpenWA-plugins",
   "keywords": ["…"],
   "status": "stable",           // "stable" | "beta" | "development"
-  "minOpenWAVersion": "0.6.1",  // compatibility convention (OpenWA does not enforce it yet)
-  "testedOpenWAVersion": "0.6.1"
+  "minOpenWAVersion": "0.7.0",  // compatibility convention (OpenWA does not enforce it yet)
+  "testedOpenWAVersion": "0.7.0"
 }
 ```
 
@@ -86,6 +92,30 @@ field is:
 `items` and `properties` nest arbitrarily (e.g. a menu tree of options → sub-options). The plugin
 still reads `ctx.config` as `Record<string, unknown>` and must validate defensively — the schema only
 drives the host's form, it is not enforced server-side.
+
+### `configUi` — sandboxed-iframe config editor (v0.7)
+
+For a richer editor than the declarative form, ship `configUi: { entry, height? }`. The host serves
+`entry` (a plugin-relative path) over an authenticated route and injects it as the `srcdoc` of a
+`sandbox="allow-scripts"` iframe (opaque origin — no access to the dashboard, its API key, or storage).
+When both `configUi` and `configSchema` are present, the dashboard prefers the iframe.
+
+- **Self-contained.** Inline your JS/CSS — a sandboxed opaque-origin srcdoc can't load subresources,
+  and the iframe has no network of its own. The editor talks ONLY to the host over `postMessage`:
+  - `→ host { type: 'config:get' }` then `← host { type: 'config:value', config, schema }`
+  - `→ host { type: 'config:save', config }` then `← host { type: 'config:saved' }` or `{ type: 'config:error', message }`
+- **Declare your fields in `configSchema` too.** The host only hands the iframe the schema-declared,
+  secret-redacted config (so an undeclared key can't leak a secret to untrusted UI); fields you don't
+  declare won't pre-fill, and secrets you mark `secret: true` arrive masked and are restored on save.
+
+### Per-session config (v0.7)
+
+A session-scoped plugin (`sessionScoped` ≠ false) may carry per-session config **overrides** on top of
+the base (`'*'`) config. The host resolves them automatically: `ctx.config` is the override
+shallow-merged over the base for the session whose event is firing (the base when there's no override,
+or for a non-session-attributed event). **Read `ctx.config` inside your hook handler** to get the
+right slice; reading it at load/lifecycle time yields the base. No plugin code is needed — the operator
+sets overrides via the dashboard/API.
 
 **Reserved ids** (cannot be used): `whatsapp-web.js`, `baileys`, `auto-reply`, `translation`.
 **Package limits** (enforced by OpenWA at install): ≤ 5 MB compressed, ≤ 200 files, ≤ 20 MB uncompressed.
