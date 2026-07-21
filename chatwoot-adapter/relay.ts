@@ -60,8 +60,10 @@ function placeholderFor(msg: IncomingMessage): string {
 
 // Render one WhatsApp message into Chatwoot (text / media / location / sticker / voice, with quote
 // threading). Live inbound always passes 'incoming'; history backfill derives the direction per message.
+// An 'outgoing' post is echo-guarded before returning (see below) — the caller need not.
 export async function relayMessage(
   deps: InboundDeps,
+  sessionId: string,
   conversationId: number,
   msg: IncomingMessage,
   messageType: 'incoming' | 'outgoing',
@@ -70,10 +72,11 @@ export async function relayMessage(
   const post = { sourceId: msg.id, inReplyToExternalId: msg.quotedMessage?.id, messageType };
   const isVoice = msg.type === 'voice';
   const isSticker = msg.type === 'sticker';
+  let created: { id: number };
   if (msg.type === 'location' && msg.location) {
-    await deps.client.postText(conversationId, locationText(msg), post);
+    created = await deps.client.postText(conversationId, locationText(msg), post);
   } else if (deps.relayMedia && msg.media?.data && !msg.media.omitted) {
-    await deps.client.postMedia(
+    created = await deps.client.postMedia(
       conversationId,
       content,
       {
@@ -85,8 +88,18 @@ export async function relayMessage(
       { ...post, isVoiceMessage: isVoice },
     );
   } else {
-    await deps.client.postText(conversationId, msg.body?.trim() ? content : placeholderFor(msg), post);
+    created = await deps.client.postText(conversationId, msg.body?.trim() ? content : placeholderFor(msg), post);
   }
+  // Echo guard for the own-send mirror (#615), the mirror image of the 'wa' marker outbound.relay writes.
+  // A message posted as 'outgoing' comes straight back as a Chatwoot `message_created` that
+  // shouldRelayOutbound accepts (it only drops 'incoming'), so without this marker outbound.relay would
+  // send it to WhatsApp a SECOND time — the recipient really receives two messages.
+  //
+  // Scoped by the WA session that owns the conversation. outbound.relay resolves the SAME value from the
+  // conversation mapping (target.sessionId) before it checks, so both sides always agree on a scope that
+  // is always defined — never the ingress delivery's `instance.sessionScope ?? undefined`, which is
+  // undefined for an unscoped instance and would key a different marker.
+  if (messageType === 'outgoing') await deps.store.markSeen('cw', String(created.id), sessionId);
 }
 
 // Get-or-create the Chatwoot contact + conversation for a chat and mirror the mapping. Self-contained so
